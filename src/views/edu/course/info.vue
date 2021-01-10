@@ -45,9 +45,20 @@
 
       <!-- 课程简介 TODO -->
       <el-form-item label="课程简介">
-        <el-input v-model="courseInfo.description" placeholder=""/>
+        <tinymce :height="300" v-model="courseInfo.description"/>
       </el-form-item>
       <!-- 课程封面 TODO -->
+      <el-form-item label="课程封面">
+        <el-upload
+          :show-file-list="false"
+          :on-success="handleAvatarSuccess"
+          :before-upload="beforeAvatarUpload"
+          :action="BASE_API+'/eduoss/file-oss'"
+          class="avatar-uploader"
+        >
+          <img :src="courseInfo.cover">
+        </el-upload>
+      </el-form-item>
       <el-form-item label="课程价格">
         <el-input-number :min="0" v-model="courseInfo.price" controls-position="right" placeholder="免费课程请设置为0元"/> 元
       </el-form-item>
@@ -59,10 +70,12 @@
 </template>
 
 <script>
+import Tinymce from '@/components/Tinymce'
 import { addCourseInfo } from '@/api/edu/course'
 import { getListTeacher } from '@/api/edu/course'
 import { getSubjectList } from '@/api/edu/subject'
 export default {
+  components: { Tinymce },
   data() {
     return {
       saveBtnDisabled: false, // 保存按钮是否禁用
@@ -76,9 +89,10 @@ export default {
         teacherId: '',
         lessonNum: 0,
         description: '',
-        cover: '',
+        cover: '/static/175.jpg',
         price: 0
-      }
+      },
+      BASE_API: process.env.BASE_API // 接口api地址
     }
   },
   watch: {
@@ -91,19 +105,31 @@ export default {
     this.getOneSubject()
   },
   methods: {
+    // 上传封面成功
+    handleAvatarSuccess(res, file) {
+      this.courseInfo.cover = res.data.url
+    },
+    // 上传之前调用的方法
+    beforeAvatarUpload(file) {
+      const isJPG = file.type === 'image/jpeg'
+      const isLt2M = file.size / 1024 / 1024 < 2
+      if (!isJPG) {
+        this.$message.error('上传图片只能是JPG格式!')
+      }
+      if (!isLt2M) {
+        this.$message.error('上传图片大小不能超过2MB!')
+      }
+      return isJPG && isLt2M
+    },
     // 点击
     getTwoList(value) {
       // 这个value是一级分类的id值
       const list = this.subjectOneList
-      // for (let i = 0; i < list.length; i++) {
-      //   const item = this.subjectOneList[i]
-      //   if (value === item.id) {
-      //     this.subjectTwoList = item.children
-      //   }
-      // }
-
       for (const item of list) {
-        if (item.id === value) this.subjectTwoList = item.children
+        if (item.id === value) {
+          this.subjectTwoList = item.children
+          this.courseInfo.subjectId = ''
+        }
       }
     },
     // 查询所有一级分类
@@ -136,6 +162,8 @@ export default {
 }
 </script>
 
-<style>
-
+<style scoped>
+  .tinymce-container {
+    line-height: 29px;
+  }
 </style>
